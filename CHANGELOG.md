@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+
+- Migrate runtime coverage to native Spork `deftest` declarations, including focused inline helper tests, and remove pytest integration.
+- Require `spork-lang` 0.4.3 or newer for native test discovery, execution, and inline anonymous callbacks.
+
 ## [0.2.0] - 2026-08-29
 
 ### Added

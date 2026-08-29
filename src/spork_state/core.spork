@@ -250,3 +250,46 @@
 (defn ^(Atom T) set-validator!
   [^(Atom T) reference ^(Optional (Callable [[T] bool])) validator]
   (reference.set-validator validator))
+
+;; Keep focused helper coverage beside the implementation. These declarations
+;; remain inert when the namespace is imported and run only through spork test.
+(deftest atom-and-validator-helpers
+  (def non-negative (fn [value] (>= value 0)))
+  (def reference (atom 1 non-negative))
+
+  (assert (atom? reference))
+  (assert (is-atom reference))
+  (assert (not (atom? 1)))
+  (assert (= (deref reference) 1))
+  (assert (is (get-validator reference) non-negative))
+  (assert (is (set-validator reference nil) reference))
+  (assert (is (get-validator reference) nil)))
+
+(deftest update-helper-functions
+  (def reference (atom 1))
+
+  (assert (= (reset reference 2) 2))
+  (def reset-values (reset-vals reference 3))
+  (assert (= (nth reset-values 0) 2))
+  (assert (= (nth reset-values 1) 3))
+  (assert (= (swap reference (fn [value amount] (+ value amount)) 4) 7))
+
+  (def swap-values (swap-vals reference (fn [value] (* value 2))))
+  (assert (= (nth swap-values 0) 7))
+  (assert (= (nth swap-values 1) 14)))
+
+(deftest watch-helper-functions
+  (def reference (atom 10))
+  (def events (list))
+  (defn record-watch [key watched old-value new-value]
+    (events.append [key (deref watched) old-value new-value]))
+
+  (assert (is (add-watch reference :inline record-watch) reference))
+  (reset reference 11)
+  (assert (= (len events) 1))
+  (assert (= (nth (nth events 0) 0) :inline))
+  (assert (= (nth (nth events 0) 1) 11))
+  (assert (= (nth (nth events 0) 2) 10))
+  (assert (= (nth (nth events 0) 3) 11))
+  (assert (is (remove-watch reference :inline) record-watch))
+  (assert (is (remove-watch reference :inline) nil)))

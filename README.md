@@ -81,7 +81,7 @@ See the [API reference](https://github.com/spork-it/spork-state/blob/main/docs/A
 
 ## Development
 
-Requires `spork-lang` 0.4.0 or newer. The public Spork namespace, Python initializer, generic stubs, version metadata, and `py.typed` are generated from the unified `:api` declaration in `spork.it`; none are maintained as parallel facade files.
+Requires `spork-lang` 0.4.3 or newer. The public Spork namespace, Python initializer, generic stubs, version metadata, and `py.typed` are generated from the unified `:api` declaration in `spork.it`; none are maintained as parallel facade files. Runtime behavior is tested exclusively through native `deftest` declarations; mypy separately checks the generated Python typing facade.
 
 ```bash
 spork sync --dev

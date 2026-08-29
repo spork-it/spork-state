@@ -58,7 +58,7 @@ jobs:
       - name: Install Spork
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "spork-lang>=0.4.0,<0.5" "mypy>=1.11"
+          python -m pip install "spork-lang>=0.4.3,<0.5" "mypy>=1.11"
 
       - name: Synchronize development environment
         run: python -m spork sync --dev --quiet
@@ -68,7 +68,7 @@ jobs:
           python -VV
           python -m spork version
 
-      - name: Run Spork and Python tests
+      - name: Run native Spork tests
         env:
           PYTHONIOENCODING: utf-8
         run: python -m spork test

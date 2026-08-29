@@ -1,11 +1,11 @@
-.PHONY: help sync test test-spork test-python typecheck build dist check-dist clean
+.PHONY: help sync test test-spork typecheck build dist check-dist clean
 
 SPORK ?= spork
 VENV_PYTHON := .venv/bin/python
 
 help:
 	@echo "sync         Install development dependencies"
-	@echo "test         Run Spork, Python, and typing tests"
+	@echo "test         Run native Spork tests and typing checks"
 	@echo "build        Compile project sources"
 	@echo "dist         Build wheel and source distribution"
 	@echo "check-dist   Validate built distributions"
@@ -14,16 +14,13 @@ help:
 sync:
 	$(SPORK) sync --dev
 
-test: test-spork test-python typecheck
+test: test-spork typecheck
 
 test-spork:
-	$(SPORK) test --spork-only
-
-test-python:
-	$(SPORK) test --python-only
+	$(SPORK) test
 
 typecheck:
-	$(VENV_PYTHON) -m mypy tests/typing/usage.py
+	MYPYPATH=.spork-out $(VENV_PYTHON) -m mypy tests/typing/usage.py
 
 build:
 	$(SPORK) build --clean

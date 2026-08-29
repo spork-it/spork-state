@@ -19,11 +19,8 @@ __pycache__/
 *.swo
 *~
 
-# Testing
-.pytest_cache/
+# Type checking
 .mypy_cache/
-.coverage
-htmlcov/
 
 # OS
 .DS_Store

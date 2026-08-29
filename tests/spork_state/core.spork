@@ -1,0 +1,223 @@
+(ns spork-state.core-test
+  (:require [spork-state :as state])
+  (:import [threading :refer [Thread]]
+           [concurrent.futures :refer [ThreadPoolExecutor]]))
+
+(deftest atom-and-functional-api
+  (def reference (state.atom 1))
+
+  (assert (state.atom? reference))
+  (assert (= (state.deref reference) 1))
+  (assert (= reference.value 1))
+  (assert (= (repr reference) "Atom(1)"))
+  (assert (= (state.reset reference 2) 2))
+
+  (def reset-values (state.reset-vals reference 3))
+  (assert (= (nth reset-values 0) 2))
+  (assert (= (nth reset-values 1) 3))
+
+  (assert (= (state.swap reference (fn [value amount] (+ value amount)) 4) 7))
+  (def swap-values (state.swap-vals reference (fn [value] (* value 2))))
+  (assert (= (nth swap-values 0) 7))
+  (assert (= (nth swap-values 1) 14)))
+
+(deftest bang-function-aliases
+  (def reference (state.atom 0))
+
+  (assert (= (state.reset! reference 1) 1))
+  (assert (= (state.swap! reference inc) 2))
+  (assert (= (state.swap! reference (fn [value amount] (+ value amount)) 3) 5))
+
+  (def reset-values (state.reset-vals! reference 8))
+  (assert (= (nth reset-values 0) 5))
+  (assert (= (nth reset-values 1) 8))
+
+  (def swap-values (state.swap-vals! reference (fn [value] (* value 2))))
+  (assert (= (nth swap-values 0) 8))
+  (assert (= (nth swap-values 1) 16)))
+
+(deftest failed-swap-does-not-commit
+  (def reference (state.atom 10))
+  (defn fail [_value]
+    (throw (RuntimeError "update failed")))
+
+  (def failure-propagated
+    (try
+      (state.swap! reference fail)
+      false
+      (catch RuntimeError error
+        (= (str error) "update failed"))))
+
+  (assert failure-propagated)
+  (assert (= (state.deref reference) 10)))
+
+(deftest validators-run-before-initialization-and-commit
+  (def non-negative (fn [value] (>= value 0)))
+
+  (def initialization-rejected
+    (try
+      (state.Atom -1 *{:validator non-negative})
+      false
+      (catch ValueError error
+        (= (str error) state.validation-error-message))))
+  (assert initialization-rejected)
+
+  (def reference (state.atom 1 non-negative))
+  (assert (is reference.validator non-negative))
+  (assert (is (state.get-validator reference) non-negative))
+
+  (def reset-rejected
+    (try
+      (state.reset! reference -1)
+      false
+      (catch ValueError error
+        (= (str error) state.validation-error-message))))
+  (assert reset-rejected)
+
+  (def swap-rejected
+    (try
+      (state.swap! reference (fn [_value] -1))
+      false
+      (catch ValueError error
+        (= (str error) state.validation-error-message))))
+  (assert swap-rejected)
+  (assert (= (state.deref reference) 1)))
+
+(deftest validator-replacement-must-accept-current-value
+  (def original (fn [value] (> value 0)))
+  (def even-validator (fn [value] (= (% value 2) 0)))
+  (def reference (state.atom 1 original))
+
+  (def replacement-rejected
+    (try
+      (state.set-validator! reference even-validator)
+      false
+      (catch ValueError error
+        (= (str error) state.validation-error-message))))
+  (assert replacement-rejected)
+  (assert (is (state.get-validator reference) original))
+
+  (state.reset! reference 2)
+  (assert (is (state.set-validator reference even-validator) reference))
+  (assert (is (state.get-validator reference) even-validator))
+  (assert (is (state.set-validator! reference nil) reference))
+  (assert (is (state.get-validator reference) nil)))
+
+(deftest compare-and-set-uses-identity
+  (def expected [1 2])
+  (def equal-but-distinct [1 2])
+  (def replacement [3])
+  (def reference (state.atom expected))
+
+  (assert (not (state.compare-and-set reference equal-but-distinct replacement)))
+  (assert (is (state.deref reference) expected))
+  (assert (state.compare-and-set! reference expected replacement))
+  (assert (is (state.deref reference) replacement)))
+
+(deftest watches-observe-committed-state-and-can-be-removed
+  (def reference (state.atom 1))
+  (def events (list))
+  (defn watch [key watched old-value new-value]
+    (events.append [key (state.deref watched) old-value new-value]))
+
+  (assert (is (state.add-watch reference :audit watch) reference))
+  (assert (= (state.reset! reference 2) 2))
+  (assert (= (len events) 1))
+  (assert (= (nth (nth events 0) 0) :audit))
+  (assert (= (nth (nth events 0) 1) 2))
+  (assert (= (nth (nth events 0) 2) 1))
+  (assert (= (nth (nth events 0) 3) 2))
+  (assert (is (state.remove-watch! reference :audit) watch))
+  (assert (is (state.remove-watch reference :audit) nil))
+
+  (state.reset! reference 3)
+  (assert (= (len events) 1)))
+
+(deftest watches-execute-outside-the-atom-lock
+  (def reference (state.atom 1))
+  (def snapshots (list))
+  (defn watch [_key watched _old-value _new-value]
+    (def reader
+      (Thread *{:target (fn [] (snapshots.append (state.deref watched)))}))
+    (reader.start)
+    (reader.join *{:timeout 2})
+    (assert (not (reader.is_alive))
+            "watch callback ran while the atom lock was held"))
+
+  (state.add-watch! reference :reader watch)
+  (state.reset! reference 2)
+  (assert (= (len snapshots) 1))
+  (assert (= (nth snapshots 0) 2)))
+
+(deftest watch-failures-propagate-without-rollback
+  (def reference (state.atom 1))
+  (defn fail [_key _reference _old-value _new-value]
+    (throw (RuntimeError "watch failed")))
+  (state.add-watch! reference :failure fail)
+
+  (def failure-propagated
+    (try
+      (state.reset! reference 2)
+      false
+      (catch RuntimeError error
+        (= (str error) "watch failed"))))
+
+  (assert failure-propagated)
+  (assert (= (state.deref reference) 2)))
+
+(deftest notifications-use-identity-not-equality
+  (def initial [1])
+  (def reference (state.atom initial))
+  (def transitions (list))
+  (state.add-watch!
+    reference
+    :changes
+    (fn [_key _reference old-value new-value]
+      (transitions.append [old-value new-value])))
+
+  (state.reset! reference initial)
+  (assert (= (len transitions) 0))
+
+  (def equal-but-distinct [1])
+  (state.reset! reference equal-but-distinct)
+  (assert (= (len transitions) 1))
+  (assert (is (nth (nth transitions 0) 0) initial))
+  (assert (is (nth (nth transitions 0) 1) equal-but-distinct)))
+
+(deftest subscriptions-fire-immediately-and-unsubscribe-idempotently
+  (def reference (state.atom "ready"))
+  (def events (list))
+  (def unsubscribe
+    (state.subscribe
+      reference
+      (fn [old-value new-value]
+        (events.append [old-value new-value]))
+      *{:fire-immediately true}))
+
+  (state.reset! reference "running")
+  (assert (is (unsubscribe) nil))
+  (assert (is (unsubscribe) nil))
+  (state.reset! reference "done")
+
+  (assert (= (len events) 2))
+  (assert (= (nth (nth events 0) 0) "ready"))
+  (assert (= (nth (nth events 0) 1) "ready"))
+  (assert (= (nth (nth events 1) 0) "ready"))
+  (assert (= (nth (nth events 1) 1) "running")))
+
+(deftest swap-is-linearizable-across-threads
+  (def reference (state.atom 0))
+  (def workers 8)
+  (def updates-per-worker 2000)
+  (defn increment-many []
+    (for [_iteration (range updates-per-worker)]
+      (state.swap! reference inc)))
+
+  (def futures (list))
+  (with [executor (ThreadPoolExecutor *{:max-workers workers})]
+    (for [_worker (range workers)]
+      (futures.append (executor.submit increment-many)))
+    (for [future futures]
+      (future.result)))
+
+  (assert (= (state.deref reference) (* workers updates-per-worker))))

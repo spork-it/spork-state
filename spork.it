@@ -5,13 +5,11 @@
  :version "0.2.0"
  :description "Thread-safe state management for Spork and Python"
  :requires-python ">=3.10"
- :spork-version ">=0.4.0,<0.5"
+ :spork-version ">=0.4.3,<0.5"
  :dependencies []
- :dev-dependencies ["pytest>=8.3"
-                    "mypy>=1.11"
+ :dev-dependencies ["mypy>=1.11"
                     "build>=1.2"
                     "twine>=5"]
- :optional-dependencies {:test ["pytest>=8.3"]}
  :source-paths ["src"]
  :test-paths ["tests"]
  :api {:from "spork-state.core"
