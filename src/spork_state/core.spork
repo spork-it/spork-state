@@ -1,53 +1,56 @@
 ;; Thread-safe mutable references for Spork and Python.
 (ns spork-state.core
-  (:import [threading :refer [RLock]]))
+  (:import [threading :refer [RLock]]
+           [typing :refer [Any Callable Generic Hashable Optional Tuple TypeVar]]))
 
-(def validation-error-message "Validator rejected reference state")
+(def T (TypeVar "T"))
+(def VALIDATION-ERROR-MESSAGE "Validator rejected reference state")
+(def validation-error-message VALIDATION-ERROR-MESSAGE)
 
-(defclass Atom []
+(defclass Atom [(Generic T)]
   "A thread-safe mutable reference with validation and synchronous watches."
 
-  (defn __init__ [self value * (validator nil)]
+  (defn __init__
+    [self
+     ^T value
+     *
+     ^(Optional (Callable [[T] bool])) (validator nil)]
     (set! self._lock (RLock))
     (set! self._validator validator)
     (set! self._watches (dict))
     (self._validate value)
     (set! self._value value))
 
-  (defn ^classmethod __class_getitem__ [cls item]
-    "Support Atom[T] in runtime-evaluated Python annotations."
-    cls)
-
-  (defn _validate [self candidate]
+  (defn ^T _validate [self ^T candidate]
     (let [validator self._validator]
       (when (and (is-not validator nil)
                  (not (validator candidate)))
-        (throw (ValueError validation-error-message))))
+        (throw (ValueError VALIDATION-ERROR-MESSAGE))))
     candidate)
 
   (defn _watch-snapshot [self]
     (list (self._watches.items)))
 
-  (defn _notify [self watches old-value new-value]
+  (defn _notify [self watches ^T old-value ^T new-value]
     ;; Watches observe committed state and execute outside the atom lock.
     (when (is-not old-value new-value)
       (for [[key callback] watches]
         (callback key self old-value new-value))))
 
-  (defn deref [self]
+  (defn ^T deref [self]
     "Return a consistent snapshot of the current value."
     (with [guard self._lock]
       self._value))
 
-  (defn ^property value [self]
+  (defn ^property ^T value [self]
     "The current value as a read-only property."
     (self.deref))
 
-  (defn ^property validator [self]
+  (defn ^property ^(Optional (Callable [[T] bool])) validator [self]
     "The current validator, or nil."
     (self.get-validator))
 
-  (defn reset [self new-value]
+  (defn ^T reset [self ^T new-value]
     "Replace the value and return the committed value."
     (def old-value nil)
     (def watches nil)
@@ -59,7 +62,7 @@
     (self._notify watches old-value new-value)
     new-value)
 
-  (defn reset-vals [self new-value]
+  (defn ^(Tuple T T) reset-vals [self ^T new-value]
     "Replace the value and return (old-value, new-value)."
     (def old-value nil)
     (def watches nil)
@@ -71,7 +74,8 @@
     (self._notify watches old-value new-value)
     (tuple [old-value new-value]))
 
-  (defn swap [self function & args]
+  (defn ^T swap
+    [self ^(Callable [[...] T]) function ^Any & args]
     "Atomically compute, commit, and return a new value."
     (def old-value nil)
     (def new-value nil)
@@ -85,7 +89,8 @@
     (self._notify watches old-value new-value)
     new-value)
 
-  (defn swap-vals [self function & args]
+  (defn ^(Tuple T T) swap-vals
+    [self ^(Callable [[...] T]) function ^Any & args]
     "Atomically update and return (old-value, new-value)."
     (def old-value nil)
     (def new-value nil)
@@ -99,7 +104,7 @@
     (self._notify watches old-value new-value)
     (tuple [old-value new-value]))
 
-  (defn compare-and-set [self expected new-value]
+  (defn ^bool compare-and-set [self ^T expected ^T new-value]
     "Commit new-value only when the current value is expected by identity."
     (def changed false)
     (def watches nil)
@@ -113,18 +118,24 @@
       (self._notify watches expected new-value))
     changed)
 
-  (defn add-watch [self key callback]
+  (defn ^(Atom T) add-watch
+    [self ^Hashable key ^(Callable [[Hashable (Atom T) T T] nil]) callback]
     "Associate a watch callback with key and return this atom."
     (with [guard self._lock]
       (self._watches.__setitem__ key callback))
     self)
 
-  (defn remove-watch [self key]
+  (defn ^(Optional (Callable [[Hashable (Atom T) T T] nil])) remove-watch
+    [self ^Hashable key]
     "Remove and return the watch associated with key, if present."
     (with [guard self._lock]
       (self._watches.pop key nil)))
 
-  (defn subscribe [self callback * (fire-immediately false)]
+  (defn ^(Callable [[] nil]) subscribe
+    [self
+     ^(Callable [[T T] nil]) callback
+     *
+     ^bool (fire-immediately false)]
     "Subscribe to (old-value, new-value) notifications."
     (let [key (object)]
       (defn subscription-watch [_key _reference old-value new-value]
@@ -137,85 +148,105 @@
         (self.remove-watch key)
         nil)))
 
-  (defn get-validator [self]
+  (defn ^(Optional (Callable [[T] bool])) get-validator [self]
     "Return the current validator, or nil."
     (with [guard self._lock]
       self._validator))
 
-  (defn set-validator [self validator]
+  (defn ^(Atom T) set-validator
+    [self ^(Optional (Callable [[T] bool])) validator]
     "Install validator after checking it against the current value."
     (with [guard self._lock]
       (when (and (is-not validator nil)
                  (not (validator self._value)))
-        (throw (ValueError validation-error-message)))
+        (throw (ValueError VALIDATION-ERROR-MESSAGE)))
       (set! self._validator validator))
     self)
 
-  (defn __repr__ [self]
+  (defn ^str __repr__ [self]
     (fmt "Atom({})" (self.deref))))
 
-(defn atom
-  ([value]
-   (Atom value))
-  ([value validator]
-   (Atom value *{:validator validator})))
+(defn ^(Atom T) atom
+  [^T value ^(Optional (Callable [[T] bool])) (validator nil)]
+  (Atom value *{:validator validator}))
 
-(defn atom? [value]
+(defn ^bool atom? [^Any value]
   (isinstance value Atom))
 
-(defn deref [reference]
+(defn ^bool is-atom [^Any value]
+  (isinstance value Atom))
+
+(defn ^T deref [^(Atom T) reference]
   (reference.deref))
 
-(defn reset [reference new-value]
+(defn ^T reset [^(Atom T) reference ^T new-value]
   (reference.reset new-value))
 
-(defn reset! [reference new-value]
+(defn ^T reset! [^(Atom T) reference ^T new-value]
   (reference.reset new-value))
 
-(defn reset-vals [reference new-value]
+(defn ^(Tuple T T) reset-vals [^(Atom T) reference ^T new-value]
   (reference.reset-vals new-value))
 
-(defn reset-vals! [reference new-value]
+(defn ^(Tuple T T) reset-vals! [^(Atom T) reference ^T new-value]
   (reference.reset-vals new-value))
 
-(defn swap [reference function & args]
+(defn ^T swap
+  [^(Atom T) reference ^(Callable [[...] T]) function ^Any & args]
   (apply reference.swap (concat [function] args)))
 
-(defn swap! [reference function & args]
+(defn ^T swap!
+  [^(Atom T) reference ^(Callable [[...] T]) function ^Any & args]
   (apply reference.swap (concat [function] args)))
 
-(defn swap-vals [reference function & args]
+(defn ^(Tuple T T) swap-vals
+  [^(Atom T) reference ^(Callable [[...] T]) function ^Any & args]
   (apply reference.swap-vals (concat [function] args)))
 
-(defn swap-vals! [reference function & args]
+(defn ^(Tuple T T) swap-vals!
+  [^(Atom T) reference ^(Callable [[...] T]) function ^Any & args]
   (apply reference.swap-vals (concat [function] args)))
 
-(defn compare-and-set [reference expected new-value]
+(defn ^bool compare-and-set [^(Atom T) reference ^T expected ^T new-value]
   (reference.compare-and-set expected new-value))
 
-(defn compare-and-set! [reference expected new-value]
+(defn ^bool compare-and-set! [^(Atom T) reference ^T expected ^T new-value]
   (reference.compare-and-set expected new-value))
 
-(defn add-watch [reference key callback]
+(defn ^(Atom T) add-watch
+  [^(Atom T) reference
+   ^Hashable key
+   ^(Callable [[Hashable (Atom T) T T] nil]) callback]
   (reference.add-watch key callback))
 
-(defn add-watch! [reference key callback]
+(defn ^(Atom T) add-watch!
+  [^(Atom T) reference
+   ^Hashable key
+   ^(Callable [[Hashable (Atom T) T T] nil]) callback]
   (reference.add-watch key callback))
 
-(defn remove-watch [reference key]
+(defn ^(Optional (Callable [[Hashable (Atom T) T T] nil])) remove-watch
+  [^(Atom T) reference ^Hashable key]
   (reference.remove-watch key))
 
-(defn remove-watch! [reference key]
+(defn ^(Optional (Callable [[Hashable (Atom T) T T] nil])) remove-watch!
+  [^(Atom T) reference ^Hashable key]
   (reference.remove-watch key))
 
-(defn subscribe [reference callback * (fire-immediately false)]
+(defn ^(Callable [[] nil]) subscribe
+  [^(Atom T) reference
+   ^(Callable [[T T] nil]) callback
+   *
+   ^bool (fire-immediately false)]
   (reference.subscribe callback *{:fire-immediately fire-immediately}))
 
-(defn get-validator [reference]
+(defn ^(Optional (Callable [[T] bool])) get-validator [^(Atom T) reference]
   (reference.get-validator))
 
-(defn set-validator [reference validator]
+(defn ^(Atom T) set-validator
+  [^(Atom T) reference ^(Optional (Callable [[T] bool])) validator]
   (reference.set-validator validator))
 
-(defn set-validator! [reference validator]
+(defn ^(Atom T) set-validator!
+  [^(Atom T) reference ^(Optional (Callable [[T] bool])) validator]
   (reference.set-validator validator))

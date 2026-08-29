@@ -58,7 +58,7 @@ jobs:
       - name: Install Spork
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "spork-lang>=0.3.5,<0.4" "mypy>=1.11"
+          python -m pip install "spork-lang>=0.3.7,<0.4" "mypy>=1.11"
 
       - name: Synchronize development environment
         run: python -m spork sync --dev --quiet
@@ -82,6 +82,7 @@ jobs:
         shell: bash
         run: |
           test -f .spork-out/spork_state/core.py
+          test -f .spork-out/spork_state/core.pyi
           test -f .spork-out/spork_state/core.spork
           test -f .spork-out/spork_state/core.spork.map.json
           test -f .spork-out/spork_state/__init__.py

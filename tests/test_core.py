@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from threading import Thread
+from typing import get_origin
 
 import pytest
 
 from spork_state import (
+    __version__,
     Atom,
     VALIDATION_ERROR_MESSAGE,
     add_watch,
@@ -27,6 +29,7 @@ from spork_state import (
 def test_atom_and_functional_api() -> None:
     reference = atom(1)
 
+    assert __version__ == "0.1.1"
     assert is_atom(reference)
     assert deref(reference) == 1
     assert reference.value == 1
@@ -35,7 +38,7 @@ def test_atom_and_functional_api() -> None:
     assert reset_vals(reference, 3) == (2, 3)
     assert swap(reference, lambda value, amount: value + amount, 4) == 7
     assert swap_vals(reference, lambda value: value * 2) == (7, 14)
-    assert Atom[int] is Atom
+    assert get_origin(Atom[int]) is Atom
 
 
 def test_update_failure_does_not_commit() -> None:

@@ -6,7 +6,7 @@
 
 Thread-safe state management with one implementation for both [Spork](https://github.com/spork-it/spork-lang) and Python.
 
-The first release provides `Atom`: a mutable reference whose updates are synchronized, validated before commit, and observable through synchronous watches. The implementation lives in Spork; the Python package is a thin, typed facade over its compiled output.
+The first release provides `Atom`: a mutable reference whose updates are synchronized, validated before commit, and observable through synchronous watches. The implementation and type declarations live in Spork; `spork build` generates the typed Python package facade directly from the manifest.
 
 ## Install
 
@@ -81,7 +81,7 @@ See the [API reference](https://github.com/spork-it/spork-state/blob/main/docs/A
 
 ## Development
 
-Requires `spork-lang` 0.3.5 or newer:
+Requires `spork-lang` 0.3.7 or newer. Package initializers, generic stubs, version metadata, and `py.typed` are generated from `spork.it` and `core.spork`; none are maintained as parallel source files.
 
 ```bash
 spork sync --dev

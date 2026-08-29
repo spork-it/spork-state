@@ -129,4 +129,4 @@ add_watch, remove_watch, subscribe
 get_validator, set_validator
 ```
 
-The package includes `py.typed` and generic stubs, so `Atom[int]` and inferred operation results are available to static type checkers.
+The build generates `py.typed` and generic stubs from the annotated Spork implementation, so `Atom[int]` and inferred operation results are available to static type checkers without hand-written Python declarations.

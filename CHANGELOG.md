@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-29
+
+### Changed
+
+- Generate the Python package initializer, version metadata, generic stubs, and `py.typed` directly from `spork.it` and annotated Spork declarations.
+- Remove the parallel hand-written Python facade and stub sources.
+- Require `spork-lang` 0.3.7 or newer for generated Python API support.
+
 ## [0.1.0] - 2026-08-29
 
 ### Added
@@ -15,5 +23,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - Typed Python facade with generic `Atom[T]` stubs.
 - Python 3.10–3.14 and free-threaded Python 3.14 support.
 
-[Unreleased]: https://github.com/spork-it/spork-state/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/spork-it/spork-state/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/spork-it/spork-state/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/spork-it/spork-state/releases/tag/v0.1.0
