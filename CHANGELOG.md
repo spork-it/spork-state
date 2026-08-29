@@ -10,7 +10,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - Generate the Python package initializer, version metadata, generic stubs, and `py.typed` directly from `spork.it` and annotated Spork declarations.
 - Remove the parallel hand-written Python facade and stub sources.
-- Require `spork-lang` 0.3.7 or newer for generated Python API support.
+- Require `spork-lang` 0.3.8 or newer for generated Python APIs and portable postponed annotations.
 
 ## [0.1.0] - 2026-08-29
 

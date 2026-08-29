@@ -5,7 +5,7 @@
  :version "0.1.1"
  :description "Thread-safe state management for Spork and Python"
  :requires-python ">=3.10"
- :spork-version ">=0.3.7,<0.4"
+ :spork-version ">=0.3.8,<0.4"
  :dependencies []
  :dev-dependencies ["pytest>=8.3"
                     "mypy>=1.11"

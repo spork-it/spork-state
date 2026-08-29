@@ -81,7 +81,7 @@ See the [API reference](https://github.com/spork-it/spork-state/blob/main/docs/A
 
 ## Development
 
-Requires `spork-lang` 0.3.7 or newer. Package initializers, generic stubs, version metadata, and `py.typed` are generated from `spork.it` and `core.spork`; none are maintained as parallel source files.
+Requires `spork-lang` 0.3.8 or newer. Package initializers, generic stubs, version metadata, and `py.typed` are generated from `spork.it` and `core.spork`; none are maintained as parallel source files.
 
 ```bash
 spork sync --dev
