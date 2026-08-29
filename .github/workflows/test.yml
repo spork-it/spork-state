@@ -1,0 +1,89 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run the full release test matrix
+        required: true
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      full:
+        description: Run the full release test matrix
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} - Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ inputs.full && fromJSON('["ubuntu-latest","ubuntu-24.04-arm","windows-latest","windows-11-arm","macos-15-intel","macos-15"]') || fromJSON('["ubuntu-latest"]') }}
+        python-version: ${{ inputs.full && fromJSON('["3.10","3.11","3.12","3.13","3.14","3.14t"]') || fromJSON('["3.10","3.14","3.14t"]') }}
+        exclude:
+          - os: windows-11-arm
+            python-version: "3.10"
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ (endsWith(matrix.os, '-arm') || matrix.os == 'macos-15') && 'arm64' || 'x64' }}
+          allow-prereleases: true
+
+      - name: Disable the GIL for free-threaded Python (Unix)
+        if: endsWith(matrix.python-version, 't') && runner.os != 'Windows'
+        run: echo "PYTHON_GIL=0" >> "$GITHUB_ENV"
+
+      - name: Disable the GIL for free-threaded Python (Windows)
+        if: endsWith(matrix.python-version, 't') && runner.os == 'Windows'
+        shell: pwsh
+        run: echo "PYTHON_GIL=0" >> $env:GITHUB_ENV
+
+      - name: Install Spork
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "spork-lang>=0.3.5,<0.4" "mypy>=1.11"
+
+      - name: Synchronize development environment
+        run: python -m spork sync --dev --quiet
+
+      - name: Print host information
+        run: |
+          python -VV
+          python -m spork version
+
+      - name: Run Spork and Python tests
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python -m spork test
+
+      - name: Check the typed Python facade
+        env:
+          MYPYPATH: .spork-out
+        run: python -m mypy tests/typing/usage.py
+
+      - name: Verify distributable package contents
+        shell: bash
+        run: |
+          test -f .spork-out/spork_state/core.py
+          test -f .spork-out/spork_state/core.spork
+          test -f .spork-out/spork_state/core.spork.map.json
+          test -f .spork-out/spork_state/__init__.py
+          test -f .spork-out/spork_state/__init__.pyi
+          test -f .spork-out/spork_state/py.typed

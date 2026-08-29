@@ -1,0 +1,221 @@
+;; Thread-safe mutable references for Spork and Python.
+(ns spork-state.core
+  (:import [threading :refer [RLock]]))
+
+(def validation-error-message "Validator rejected reference state")
+
+(defclass Atom []
+  "A thread-safe mutable reference with validation and synchronous watches."
+
+  (defn __init__ [self value * (validator nil)]
+    (set! self._lock (RLock))
+    (set! self._validator validator)
+    (set! self._watches (dict))
+    (self._validate value)
+    (set! self._value value))
+
+  (defn ^classmethod __class_getitem__ [cls item]
+    "Support Atom[T] in runtime-evaluated Python annotations."
+    cls)
+
+  (defn _validate [self candidate]
+    (let [validator self._validator]
+      (when (and (is-not validator nil)
+                 (not (validator candidate)))
+        (throw (ValueError validation-error-message))))
+    candidate)
+
+  (defn _watch-snapshot [self]
+    (list (self._watches.items)))
+
+  (defn _notify [self watches old-value new-value]
+    ;; Watches observe committed state and execute outside the atom lock.
+    (when (is-not old-value new-value)
+      (for [[key callback] watches]
+        (callback key self old-value new-value))))
+
+  (defn deref [self]
+    "Return a consistent snapshot of the current value."
+    (with [guard self._lock]
+      self._value))
+
+  (defn ^property value [self]
+    "The current value as a read-only property."
+    (self.deref))
+
+  (defn ^property validator [self]
+    "The current validator, or nil."
+    (self.get-validator))
+
+  (defn reset [self new-value]
+    "Replace the value and return the committed value."
+    (def old-value nil)
+    (def watches nil)
+    (with [guard self._lock]
+      (self._validate new-value)
+      (set! old-value self._value)
+      (set! self._value new-value)
+      (set! watches (self._watch-snapshot)))
+    (self._notify watches old-value new-value)
+    new-value)
+
+  (defn reset-vals [self new-value]
+    "Replace the value and return (old-value, new-value)."
+    (def old-value nil)
+    (def watches nil)
+    (with [guard self._lock]
+      (self._validate new-value)
+      (set! old-value self._value)
+      (set! self._value new-value)
+      (set! watches (self._watch-snapshot)))
+    (self._notify watches old-value new-value)
+    (tuple [old-value new-value]))
+
+  (defn swap [self function & args]
+    "Atomically compute, commit, and return a new value."
+    (def old-value nil)
+    (def new-value nil)
+    (def watches nil)
+    (with [guard self._lock]
+      (set! old-value self._value)
+      (set! new-value (apply function (concat [old-value] args)))
+      (self._validate new-value)
+      (set! self._value new-value)
+      (set! watches (self._watch-snapshot)))
+    (self._notify watches old-value new-value)
+    new-value)
+
+  (defn swap-vals [self function & args]
+    "Atomically update and return (old-value, new-value)."
+    (def old-value nil)
+    (def new-value nil)
+    (def watches nil)
+    (with [guard self._lock]
+      (set! old-value self._value)
+      (set! new-value (apply function (concat [old-value] args)))
+      (self._validate new-value)
+      (set! self._value new-value)
+      (set! watches (self._watch-snapshot)))
+    (self._notify watches old-value new-value)
+    (tuple [old-value new-value]))
+
+  (defn compare-and-set [self expected new-value]
+    "Commit new-value only when the current value is expected by identity."
+    (def changed false)
+    (def watches nil)
+    (with [guard self._lock]
+      (when (is self._value expected)
+        (self._validate new-value)
+        (set! self._value new-value)
+        (set! watches (self._watch-snapshot))
+        (set! changed true)))
+    (when changed
+      (self._notify watches expected new-value))
+    changed)
+
+  (defn add-watch [self key callback]
+    "Associate a watch callback with key and return this atom."
+    (with [guard self._lock]
+      (self._watches.__setitem__ key callback))
+    self)
+
+  (defn remove-watch [self key]
+    "Remove and return the watch associated with key, if present."
+    (with [guard self._lock]
+      (self._watches.pop key nil)))
+
+  (defn subscribe [self callback * (fire-immediately false)]
+    "Subscribe to (old-value, new-value) notifications."
+    (let [key (object)]
+      (defn subscription-watch [_key _reference old-value new-value]
+        (callback old-value new-value))
+      (self.add-watch key subscription-watch)
+      (when fire-immediately
+        (let [current (self.deref)]
+          (callback current current)))
+      (fn []
+        (self.remove-watch key)
+        nil)))
+
+  (defn get-validator [self]
+    "Return the current validator, or nil."
+    (with [guard self._lock]
+      self._validator))
+
+  (defn set-validator [self validator]
+    "Install validator after checking it against the current value."
+    (with [guard self._lock]
+      (when (and (is-not validator nil)
+                 (not (validator self._value)))
+        (throw (ValueError validation-error-message)))
+      (set! self._validator validator))
+    self)
+
+  (defn __repr__ [self]
+    (fmt "Atom({})" (self.deref))))
+
+(defn atom
+  ([value]
+   (Atom value))
+  ([value validator]
+   (Atom value *{:validator validator})))
+
+(defn atom? [value]
+  (isinstance value Atom))
+
+(defn deref [reference]
+  (reference.deref))
+
+(defn reset [reference new-value]
+  (reference.reset new-value))
+
+(defn reset! [reference new-value]
+  (reference.reset new-value))
+
+(defn reset-vals [reference new-value]
+  (reference.reset-vals new-value))
+
+(defn reset-vals! [reference new-value]
+  (reference.reset-vals new-value))
+
+(defn swap [reference function & args]
+  (apply reference.swap (concat [function] args)))
+
+(defn swap! [reference function & args]
+  (apply reference.swap (concat [function] args)))
+
+(defn swap-vals [reference function & args]
+  (apply reference.swap-vals (concat [function] args)))
+
+(defn swap-vals! [reference function & args]
+  (apply reference.swap-vals (concat [function] args)))
+
+(defn compare-and-set [reference expected new-value]
+  (reference.compare-and-set expected new-value))
+
+(defn compare-and-set! [reference expected new-value]
+  (reference.compare-and-set expected new-value))
+
+(defn add-watch [reference key callback]
+  (reference.add-watch key callback))
+
+(defn add-watch! [reference key callback]
+  (reference.add-watch key callback))
+
+(defn remove-watch [reference key]
+  (reference.remove-watch key))
+
+(defn remove-watch! [reference key]
+  (reference.remove-watch key))
+
+(defn subscribe [reference callback * (fire-immediately false)]
+  (reference.subscribe callback *{:fire-immediately fire-immediately}))
+
+(defn get-validator [reference]
+  (reference.get-validator))
+
+(defn set-validator [reference validator]
+  (reference.set-validator validator))
+
+(defn set-validator! [reference validator]
+  (reference.set-validator validator))

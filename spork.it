@@ -1,0 +1,37 @@
+;; Spork Project Manifest
+;; See https://github.com/spork-it/spork-lang/blob/main/docs/PROJECTS.md
+
+{:name "spork-state"
+ :version "0.1.0"
+ :description "Thread-safe state management for Spork and Python"
+ :requires-python ">=3.10"
+ :spork-version ">=0.3.5,<0.4"
+ :dependencies []
+ :dev-dependencies ["pytest>=8.3"
+                    "mypy>=1.11"
+                    "build>=1.2"
+                    "twine>=5"]
+ :optional-dependencies {:test ["pytest>=8.3"]}
+ :source-paths ["src"]
+ :test-paths ["tests"]
+ :readme "README.md"
+ :license "MIT"
+ :license-file "LICENSE"
+ :authors [{:name "Grant Wade" :email "grant@spork.sh"}]
+ :keywords ["spork" "state" "atom" "concurrency" "lisp"]
+ :classifiers ["Development Status :: 3 - Alpha"
+               "Intended Audience :: Developers"
+               "Operating System :: OS Independent"
+               "Programming Language :: Lisp"
+               "Programming Language :: Python :: 3"
+               "Programming Language :: Python :: 3.10"
+               "Programming Language :: Python :: 3.11"
+               "Programming Language :: Python :: 3.12"
+               "Programming Language :: Python :: 3.13"
+               "Programming Language :: Python :: 3.14"
+               "Typing :: Typed"]
+ :urls {:Homepage "https://github.com/spork-it/spork-state"
+        :Documentation "https://github.com/spork-it/spork-state#readme"
+        :Repository "https://github.com/spork-it/spork-state"
+        :Issues "https://github.com/spork-it/spork-state/issues"
+        :Changelog "https://github.com/spork-it/spork-state/blob/main/CHANGELOG.md"}}
