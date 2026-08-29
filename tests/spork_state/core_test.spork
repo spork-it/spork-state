@@ -1,5 +1,5 @@
 (ns spork-state.core-test
-  (:require [spork-state.core :as state]))
+  (:require [spork-state :as state]))
 
 (print "Testing spork-state Atom...")
 

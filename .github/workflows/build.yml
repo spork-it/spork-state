@@ -28,7 +28,7 @@ jobs:
       - name: Install build toolchain
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "spork-lang>=0.3.8,<0.4" twine
+          python -m pip install "spork-lang>=0.4.0,<0.5" twine
 
       - name: Verify tag and manifest versions match
         env:
@@ -64,6 +64,7 @@ jobs:
 
           wheel = next(Path("dist").glob("*.whl"))
           required = {
+              "spork_state/__init__.spork",
               "spork_state/__init__.py",
               "spork_state/__init__.pyi",
               "spork_state/core.py",
@@ -131,7 +132,7 @@ jobs:
       - name: Smoke-test installed Spork source discovery
         working-directory: ${{ runner.temp }}
         run: |
-          python -m spork -c '(ns release-smoke (:require [spork-state.core :as state])) (def value (state.atom 1)) (assert (= (state.swap! value inc) 2))'
+          python -m spork -c '(ns release-smoke (:require [spork-state :as state])) (def value (state.atom 1)) (assert (= (state.swap! value inc) 2))'
 
   test_sdist:
     name: Test source distribution

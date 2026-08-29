@@ -6,7 +6,7 @@
 
 Thread-safe state management with one implementation for both [Spork](https://github.com/spork-it/spork-lang) and Python.
 
-The first release provides `Atom`: a mutable reference whose updates are synchronized, validated before commit, and observable through synchronous watches. The implementation and type declarations live in Spork; `spork build` generates the typed Python package facade directly from the manifest.
+`spork-state` provides `Atom`: a mutable reference whose updates are synchronized, validated before commit, and observable through synchronous watches. The implementation and type declarations live in Spork; `spork build` generates idiomatic package-level Spork and typed Python APIs directly from the manifest.
 
 ## Install
 
@@ -19,7 +19,7 @@ python -m pip install spork-state
 Spork projects add the package to `spork.it` and synchronize the project environment:
 
 ```clojure
-:dependencies ["spork-state>=0.1,<0.2"]
+:dependencies ["spork-state>=0.2,<0.3"]
 ```
 
 ```bash
@@ -53,7 +53,7 @@ Functional equivalents (`atom`, `deref`, `swap`, `reset`, and others) are also e
 
 ```clojure
 (ns example.counter
-  (:require [spork-state.core :as state]))
+  (:require [spork-state :as state]))
 
 (def counter (state.atom 0 (fn [value] (>= value 0))))
 
@@ -81,7 +81,7 @@ See the [API reference](https://github.com/spork-it/spork-state/blob/main/docs/A
 
 ## Development
 
-Requires `spork-lang` 0.3.8 or newer. Package initializers, generic stubs, version metadata, and `py.typed` are generated from `spork.it` and `core.spork`; none are maintained as parallel source files.
+Requires `spork-lang` 0.4.0 or newer. The public Spork namespace, Python initializer, generic stubs, version metadata, and `py.typed` are generated from the unified `:api` declaration in `spork.it`; none are maintained as parallel facade files.
 
 ```bash
 spork sync --dev

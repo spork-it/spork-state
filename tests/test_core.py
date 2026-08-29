@@ -29,7 +29,7 @@ from spork_state import (
 def test_atom_and_functional_api() -> None:
     reference = atom(1)
 
-    assert __version__ == "0.1.1"
+    assert __version__ == "0.2.0"
     assert is_atom(reference)
     assert deref(reference) == 1
     assert reference.value == 1

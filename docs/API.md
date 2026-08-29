@@ -1,5 +1,18 @@
 # API reference
 
+Import the public API from the package root:
+
+```python
+from spork_state import Atom, atom, deref, swap
+```
+
+```clojure
+(ns example.state
+  (:require [spork-state :as state]))
+```
+
+The implementation namespace `spork-state.core` remains available for direct use.
+
 ## `Atom`
 
 ### Construction
