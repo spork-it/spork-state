@@ -2,10 +2,10 @@
 ;; See https://github.com/spork-it/spork-lang/blob/main/docs/PROJECTS.md
 
 {:name "spork-state"
- :version "0.2.0"
+ :version "0.2.1"
  :description "Thread-safe state management for Spork and Python"
  :requires-python ">=3.10"
- :spork-version ">=0.4.3,<0.5"
+ :spork-version ">=0.5.0,<0.6"
  :dependencies []
  :dev-dependencies ["mypy>=1.11"
                     "build>=1.2"

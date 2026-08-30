@@ -4,10 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-29
+
 ### Changed
 
 - Migrate runtime coverage to native Spork `deftest` declarations, including focused inline helper tests, and remove pytest integration.
-- Require `spork-lang` 0.4.3 or newer for native test discovery, execution, and inline anonymous callbacks.
+- Build and test distributions with `spork-lang` 0.5.0 while requiring only `spork-runtime` from installed packages.
 
 ## [0.2.0] - 2026-08-29
 
@@ -39,7 +41,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Typed Python facade with generic `Atom[T]` stubs.
 - Python 3.10–3.14 and free-threaded Python 3.14 support.
 
-[Unreleased]: https://github.com/spork-it/spork-state/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/spork-it/spork-state/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/spork-it/spork-state/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/spork-it/spork-state/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/spork-it/spork-state/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/spork-it/spork-state/releases/tag/v0.1.0

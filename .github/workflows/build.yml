@@ -28,7 +28,7 @@ jobs:
       - name: Install build toolchain
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "spork-lang>=0.4.3,<0.5" twine
+          python -m pip install "spork-lang==0.5.0" twine
 
       - name: Verify tag and manifest versions match
         env:
@@ -59,6 +59,7 @@ jobs:
       - name: Verify wheel payload
         run: |
           python - <<'PY'
+          from email import message_from_bytes
           from pathlib import Path
           from zipfile import ZipFile
 
@@ -74,9 +75,20 @@ jobs:
               "spork_state/py.typed",
           }
           with ZipFile(wheel) as archive:
-              missing = required.difference(archive.namelist())
+              names = archive.namelist()
+              missing = required.difference(names)
+              metadata_name = next(
+                  name for name in names if name.endswith(".dist-info/METADATA")
+              )
+              metadata = message_from_bytes(archive.read(metadata_name))
           if missing:
               raise SystemExit(f"wheel is missing: {sorted(missing)}")
+
+          requirements = metadata.get_all("Requires-Dist", [])
+          if not any(requirement.startswith("spork-runtime") for requirement in requirements):
+              raise SystemExit("wheel does not require spork-runtime")
+          if any(requirement.startswith("spork-lang") for requirement in requirements):
+              raise SystemExit("wheel must not require the spork-lang compiler")
           PY
 
       - name: Upload distributions
@@ -116,6 +128,20 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install dist/*.whl
 
+      - name: Verify runtime-only dependency installation
+        run: |
+          python - <<'PY'
+          from importlib.metadata import PackageNotFoundError, version
+
+          assert version("spork-runtime")
+          try:
+              version("spork-lang")
+          except PackageNotFoundError:
+              pass
+          else:
+              raise SystemExit("spork-state unexpectedly installed spork-lang")
+          PY
+
       - name: Smoke-test Python API outside the checkout
         working-directory: ${{ runner.temp }}
         run: |
@@ -128,6 +154,9 @@ jobs:
           assert swap(counter, lambda value: value + 1) == 1
           assert counter.value == 1
           PY
+
+      - name: Install Spork
+        run: python -m pip install "spork-lang==0.5.0"
 
       - name: Smoke-test installed Spork source discovery
         working-directory: ${{ runner.temp }}
