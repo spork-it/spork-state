@@ -1,5 +1,5 @@
 ;; Spork Project Manifest
-;; See https://github.com/spork-it/spork-lang/blob/main/docs/PROJECTS.md
+;; See https://spork.sh/docs/reference/tooling/
 
 {:name "spork-state"
  :version "0.2.1"
@@ -71,8 +71,8 @@
                "Programming Language :: Python :: 3.13"
                "Programming Language :: Python :: 3.14"
                "Typing :: Typed"]
- :urls {:Homepage "https://github.com/spork-it/spork-state"
-        :Documentation "https://github.com/spork-it/spork-state#readme"
+ :urls {:Homepage "https://spork.sh/docs/packages/spork-state/"
+        :Documentation "https://spork.sh/docs/packages/spork-state/"
         :Repository "https://github.com/spork-it/spork-state"
         :Issues "https://github.com/spork-it/spork-state/issues"
         :Changelog "https://github.com/spork-it/spork-state/blob/main/CHANGELOG.md"}}
