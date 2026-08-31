@@ -34,7 +34,7 @@
   (defn _notify [self watches ^T old-value ^T new-value]
     ;; Watches observe committed state and execute outside the atom lock.
     (when (is-not old-value new-value)
-      (for [[key callback] watches]
+      (doseq [[key callback] watches]
         (callback key self old-value new-value))))
 
   (defn ^T deref [self]

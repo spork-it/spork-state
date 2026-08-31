@@ -210,14 +210,14 @@
   (def workers 8)
   (def updates-per-worker 2000)
   (defn increment-many []
-    (for [_iteration (range updates-per-worker)]
+    (doseq [_iteration (range updates-per-worker)]
       (state.swap! reference inc)))
 
   (def futures (list))
   (with [executor (ThreadPoolExecutor *{:max-workers workers})]
-    (for [_worker (range workers)]
+    (doseq [_worker (range workers)]
       (futures.append (executor.submit increment-many)))
-    (for [future futures]
+    (doseq [future futures]
       (future.result)))
 
   (assert (= (state.deref reference) (* workers updates-per-worker))))
