@@ -58,7 +58,7 @@
  :readme "README.md"
  :license "MIT"
  :license-file "LICENSE"
- :authors [{:name "Grant Wade" :email "grant@spork.sh"}]
+ :authors [{:name "Grant Wade" :email "grant@wade.software"}]
  :keywords ["spork" "state" "atom" "concurrency" "lisp"]
  :classifiers ["Development Status :: 3 - Alpha"
                "Intended Audience :: Developers"
